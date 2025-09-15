@@ -17,21 +17,28 @@ export default async (req, res) => {
     }
 
     const lastUserMessage = chatHistory[chatHistory.length - 1].parts[0].text.toLowerCase();
-    const isCodeRequest = lastUserMessage.includes('build') || lastUserMessage.includes('create') || lastUserMessage.includes('generate') || lastUserMessage.includes('fix') || lastUserMessage.includes('debug') || lastUserMessage.includes('code');
+    
+    // Check for clear code-building intent
+    const isCodeRequest = lastUserMessage.includes('generate') || 
+                           lastUserMessage.includes('build') || 
+                           lastUserMessage.includes('create') || 
+                           lastUserMessage.includes('code') || 
+                           lastUserMessage.includes('fix') || 
+                           lastUserMessage.includes('debug');
 
-    let agentPrompt = '';
+    let systemInstruction = '';
 
     if (isCodeRequest) {
-        agentPrompt = `You are an expert full-stack developer and a world-class AI website builder. Your sole purpose is to write complete, single-file, mobile-responsive HTML web applications based on user requests. Always include all HTML, CSS, and JavaScript in one file. Do not provide any conversational text, just the code.`;
+        systemInstruction = `You are a world-class AI website builder. Your purpose is to write complete, single-file HTML web applications based on user requests. Do not provide any conversational text, just the code and a brief explanation of what you generated.`;
     } else {
-        agentPrompt = `You are a friendly, conversational AI assistant. You can chat with the user and answer questions, but you are also an expert on web development and can help them build websites if they ask. Always maintain a helpful and positive tone.`;
+        systemInstruction = `You are a friendly, conversational AI assistant. You can chat with the user and answer questions about web development and building websites. Always maintain a helpful and positive tone.`;
     }
 
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
     const payload = {
         contents: chatHistory,
-        systemInstruction: { parts: [{ text: agentPrompt }] }
+        systemInstruction: { parts: [{ text: systemInstruction }] }
     };
 
     let apiResponse;
