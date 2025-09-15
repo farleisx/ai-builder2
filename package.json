@@ -2,9 +2,9 @@
   "name": "ai-website-builder",
   "version": "1.0.0",
   "description": "An AI website builder using the Gemini API and Vercel",
-  "main": "api/generate.js",
+  "private": true,
   "scripts": {
-    "start": "vercel dev"
+    "start": "node api/generate.js"
   },
   "dependencies": {
     "node-fetch": "^2.6.1"
