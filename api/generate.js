@@ -1,20 +1,29 @@
+const express = require('express');
 const fetch = require('node-fetch');
+const path = require('path');
+const app = express();
 
-// This is the Vercel serverless function entry point
-export default async (req, res) => {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method Not Allowed' });
-    }
+const port = process.env.PORT || 3000;
 
+app.use(express.json());
+app.use(express.static(__dirname));
+
+// Main endpoint to serve the frontend
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Endpoint to generate website code using Gemini API
+app.post('/generate-website', async (req, res) => {
     const userPrompt = req.body.prompt;
     if (!userPrompt) {
         return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    // IMPORTANT: Get the API key securely from Vercel environment variables
+    // IMPORTANT: Get the API key securely from Replit secrets
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-        return res.status(500).json({ error: 'API key is not configured as an environment variable.' });
+        return res.status(500).json({ error: 'API key is not configured in Replit secrets.' });
     }
 
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
@@ -47,10 +56,15 @@ export default async (req, res) => {
 
         const generatedCode = apiResult.candidates?.[0]?.content?.parts?.[0]?.text || 'No code was generated. Please try a different prompt.';
 
-        res.status(200).json({ code: generatedCode });
+        res.json({ code: generatedCode });
 
     } catch (error) {
         console.error('Server error:', error);
         res.status(500).json({ error: 'An unexpected error occurred.' });
     }
-};
+});
+
+app.listen(port, () => {
+    console.log(`Server is running at http://localhost:${port}`);
+    console.log('Ensure you have a GEMINI_API_KEY environment variable set in Replit secrets.');
+});
