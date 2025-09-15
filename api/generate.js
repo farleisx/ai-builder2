@@ -16,13 +16,18 @@ export default async (req, res) => {
         return res.status(500).json({ error: 'API key is not configured as an environment variable.' });
     }
     
-    // This single system instruction tells the AI to be a dual-purpose agent.
-    // It is now up to the AI to decide whether to be conversational or to generate code.
-    const systemInstruction = `You are a friendly and helpful AI web development assistant. Your primary goal is to help the user build websites and write code.
-    
-    If the user asks for a website, app, or code snippet, respond with a complete, single-file HTML web application. Do not provide any conversational text, just the code and a brief explanation of what you generated. Wrap the code in markdown with the correct language tag (e.g., \`\`\`html).
+    // Check if the last message is a short, simple greeting
+    const lastUserMessage = chatHistory[chatHistory.length - 1].parts[0].text.toLowerCase().trim();
+    const isGreeting = ['hi', 'hello', 'hey', 'what\'s up', 'yo'].includes(lastUserMessage);
 
-    If the user's query is a general question, a greeting, or a request for advice, respond conversationally and do not provide any code. Be friendly and maintain a positive tone.`;
+    let systemInstruction;
+    
+    // Choose the system instruction based on the user's intent
+    if (isGreeting) {
+        systemInstruction = `You are a friendly and helpful AI assistant. Respond to the user's greeting in a friendly, conversational tone. Do not provide any code or website-building assistance.`;
+    } else {
+        systemInstruction = `You are a world-class AI website builder. Your purpose is to write complete, single-file HTML web applications based on user requests. Do not provide any conversational text, just the code and a brief explanation of what you generated.`;
+    }
 
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
@@ -39,7 +44,6 @@ export default async (req, res) => {
             body: JSON.stringify(payload)
         });
 
-        // Check if the response is ok before proceeding with the stream
         if (!apiResponse.ok) {
             const errorText = await apiResponse.text();
             console.error('API Error:', apiResponse.status, errorText);
@@ -52,7 +56,6 @@ export default async (req, res) => {
             'Transfer-Encoding': 'chunked'
         });
 
-        // Stream the response from the API to the client
         for await (const chunk of apiResponse.body) {
             res.write(chunk);
         }
