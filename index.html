@@ -6,147 +6,184 @@
     <title>AI Website Builder</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Inter:wght@400;700&display=swap');
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0c0d10;
-            color: #e2e8f0;
-            transition: background-color 0.3s ease;
+            background-color: #0b0c10;
+            color: #c5c6c7;
+            overflow: hidden;
         }
-        .container {
-            max-width: 900px;
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            height: calc(100vh - 120px);
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #66fcf1 #1f2833;
         }
-        .btn-orange {
-            background-color: #ff5700;
-            color: white;
-            font-weight: 600;
-            padding: 0.75rem 1.5rem;
-            border-radius: 9999px;
-            transition: background-color 0.3s ease, transform 0.2s ease;
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
         }
-        .btn-orange:hover {
-            background-color: #e54d00;
-            transform: translateY(-2px);
+        .chat-container::-webkit-scrollbar-track {
+            background: #1f2833;
         }
+        .chat-container::-webkit-scrollbar-thumb {
+            background-color: #66fcf1;
+            border-radius: 20px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 10px 15px;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background-color: #45a29e;
+            color: #0b0c10;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+        }
+
+        .ai-message {
+            background-color: #1f2833;
+            color: #c5c6c7;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+            position: relative;
+        }
+
+        .code-editor {
+            font-family: 'Fira Code', monospace;
+            background-color: #1f2833;
+            color: #c5c6c7;
+            border: 2px solid #45a29e;
+            resize: none;
+        }
+
         .spinner {
             border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid #ff5700;
+            border-top: 4px solid #66fcf1;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 24px;
+            height: 24px;
             animation: spin 1s linear infinite;
         }
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        textarea {
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        textarea:focus {
-            box-shadow: 0 0 0 3px rgba(255, 87, 0, 0.5);
-        }
     </style>
 </head>
-<body class="p-4 md:p-8">
-    <div class="container mx-auto p-6 md:p-12 rounded-2xl bg-[#1a1c22] shadow-2xl">
-        <h1 class="text-3xl md:text-5xl font-extrabold text-center mb-4">
-            AI Website Builder ✨
-        </h1>
-        <p class="text-center text-gray-400 mb-12">
-            Describe the website you want to build and let the AI bring it to life in a single HTML file.
-        </p>
+<body class="flex flex-col md:flex-row h-screen p-4">
 
-        <div class="flex flex-col space-y-6 mb-8">
-            <textarea id="website-prompt" placeholder="e.g., A sleek, dark-themed personal portfolio for a software developer with sections for projects and contact information." class="w-full h-40 bg-[#2a2c2f] text-gray-200 rounded-lg p-4 resize-none focus:outline-none focus:ring-2 focus:ring-orange-500"></textarea>
-            <button id="generate-btn" class="btn-orange flex items-center justify-center">
-                <span id="button-text">Build My Website</span>
-                <div id="loading-spinner" class="hidden spinner ml-2"></div>
+    <!-- Left Panel: Chat Interface -->
+    <div class="flex-1 flex flex-col bg-[#11161d] rounded-2xl shadow-lg p-6 mr-0 md:mr-4 mb-4 md:mb-0">
+        <h1 class="text-3xl font-bold mb-6 text-center text-[#66fcf1]">AI Website Agent</h1>
+        <div id="chat-history" class="chat-container flex flex-col mb-4">
+            <div class="ai-message self-start text-sm">Hello! I am your AI web development agent. How can I help you build a website today?</div>
+        </div>
+        <div class="flex">
+            <input type="text" id="user-prompt" placeholder="Describe your website idea..." class="flex-1 p-3 rounded-l-xl bg-[#1f2833] text-white focus:outline-none focus:ring-2 focus:ring-[#45a29e]">
+            <button id="send-button" class="bg-[#66fcf1] text-[#0b0c10] px-6 py-3 rounded-r-xl font-bold transition-transform transform hover:scale-105">
+                <span id="send-text">Send</span>
+                <div id="spinner" class="spinner hidden"></div>
             </button>
         </div>
+    </div>
 
-        <div id="code-container" class="mt-8 hidden">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold">Generated Website Code:</h2>
-                <button id="copy-btn" class="text-sm font-semibold text-gray-400 hover:text-white transition-colors duration-200">
-                    Copy Code
-                </button>
-            </div>
-            <textarea id="generated-code" readonly class="w-full h-[500px] bg-[#0d0e0f] text-[#34d399] p-4 rounded-lg resize-none font-mono focus:outline-none"></textarea>
-            <p class="text-gray-500 text-sm mt-2 text-center">
-                Copy this code and save it as an HTML file to view your new website.
-            </p>
+    <!-- Right Panel: Live Preview & Code Editor -->
+    <div class="flex-1 flex flex-col bg-[#11161d] rounded-2xl shadow-lg p-6">
+        <div class="flex-1 mb-4 flex flex-col">
+            <h2 class="text-xl font-bold mb-2 text-center text-[#66fcf1]">Live Preview</h2>
+            <iframe id="live-preview" class="flex-1 bg-white border-2 border-[#45a29e] rounded-xl mb-4"></iframe>
+            <h2 class="text-xl font-bold mb-2 text-center text-[#66fcf1]">Generated Code</h2>
+            <textarea id="code-output" class="code-editor flex-1 p-4 rounded-xl text-sm leading-relaxed" readonly></textarea>
         </div>
-        
-        <div id="error-message" class="mt-4 text-center text-red-500 hidden"></div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const websitePrompt = document.getElementById('website-prompt');
-            const generateBtn = document.getElementById('generate-btn');
-            const buttonText = document.getElementById('button-text');
-            const loadingSpinner = document.getElementById('loading-spinner');
-            const codeContainer = document.getElementById('code-container');
-            const generatedCode = document.getElementById('generated-code');
-            const errorMessage = document.getElementById('error-message');
-            const copyBtn = document.getElementById('copy-btn');
+        const userPromptInput = document.getElementById('user-prompt');
+        const sendButton = document.getElementById('send-button');
+        const sendText = document.getElementById('send-text');
+        const spinner = document.getElementById('spinner');
+        const chatHistoryDiv = document.getElementById('chat-history');
+        const codeOutputTextarea = document.getElementById('code-output');
+        const livePreviewFrame = document.getElementById('live-preview');
 
-            generateBtn.addEventListener('click', async () => {
-                const userPrompt = websitePrompt.value.trim();
-                if (!userPrompt) {
-                    errorMessage.textContent = 'Please enter a description for your website.';
-                    errorMessage.classList.remove('hidden');
-                    return;
+        let chatHistory = [{
+            role: "user",
+            parts: [{ text: "I want you to act as a world-class web developer. Your task is to generate complete, single-file HTML websites based on user requests. The code should be fully self-contained, including all necessary CSS and JavaScript within <style> and <script> tags. Use modern, clean design principles and ensure the website is fully mobile-responsive. The website should look and function professionally. Respond with ONLY the complete HTML code, nothing else." }]
+        }];
+
+        const createMessage = (text, sender) => {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender === 'user' ? 'user-message' : 'ai-message');
+            messageDiv.textContent = text;
+            chatHistoryDiv.appendChild(messageDiv);
+            chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+        };
+
+        const generateCode = async () => {
+            const userMessage = userPromptInput.value.trim();
+            if (!userMessage) return;
+
+            createMessage(userMessage, 'user');
+            userPromptInput.value = '';
+
+            // Add user message to history
+            chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
+
+            sendButton.disabled = true;
+            sendText.classList.add('hidden');
+            spinner.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chatHistory: chatHistory })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Server error occurred.');
                 }
-                errorMessage.classList.add('hidden');
 
-                // Show loading state
-                buttonText.textContent = 'Building...';
-                loadingSpinner.classList.remove('hidden');
-                generateBtn.disabled = true;
-                codeContainer.classList.add('hidden');
-                generatedCode.value = '';
+                const result = await response.json();
+                const generatedCode = result.code;
+                
+                // Add AI message to history
+                chatHistory.push({ role: "model", parts: [{ text: generatedCode }] });
+                
+                // Update code editor and live preview
+                codeOutputTextarea.value = generatedCode;
+                livePreviewFrame.srcdoc = generatedCode;
+                
+                createMessage("Here is the website I generated for you. You can continue to chat with me to modify it.", 'ai');
+            
+            } catch (error) {
+                console.error("Fetch error:", error);
+                createMessage(`Error: ${error.message}. Please try again.`, 'ai');
+            } finally {
+                sendButton.disabled = false;
+                sendText.classList.remove('hidden');
+                spinner.classList.add('hidden');
+            }
+        };
 
-                try {
-                    // Call the secure Vercel serverless function
-                    const response = await fetch('/api/generate', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ prompt: userPrompt })
-                    });
-
-                    const result = await response.json();
-                    
-                    if (!response.ok) {
-                        generatedCode.value = 'Error: ' + (result.error || 'Something went wrong.');
-                        codeContainer.classList.remove('hidden');
-                        return;
-                    }
-
-                    generatedCode.value = result.code;
-                    codeContainer.classList.remove('hidden');
-
-                } catch (error) {
-                    console.error('Fetch error:', error);
-                    generatedCode.value = 'An unexpected error occurred. Check the server console.';
-                    codeContainer.classList.remove('hidden');
-                } finally {
-                    buttonText.textContent = 'Build My Website';
-                    loadingSpinner.classList.add('hidden');
-                    generateBtn.disabled = false;
-                }
-            });
-
-            copyBtn.addEventListener('click', () => {
-                generatedCode.select();
-                document.execCommand('copy');
-                copyBtn.textContent = 'Copied!';
-                setTimeout(() => {
-                    copyBtn.textContent = 'Copy Code';
-                }, 2000);
-            });
+        sendButton.addEventListener('click', generateCode);
+        userPromptInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                generateCode();
+            }
         });
     </script>
 </body>
