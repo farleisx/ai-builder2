@@ -15,24 +15,14 @@ export default async (req, res) => {
     if (!apiKey) {
         return res.status(500).json({ error: 'API key is not configured as an environment variable.' });
     }
-
-    const lastUserMessage = chatHistory[chatHistory.length - 1].parts[0].text.toLowerCase();
     
-    // Check for clear code-building intent
-    const isCodeRequest = lastUserMessage.includes('generate') || 
-                           lastUserMessage.includes('build') || 
-                           lastUserMessage.includes('create') || 
-                           lastUserMessage.includes('code') || 
-                           lastUserMessage.includes('fix') || 
-                           lastUserMessage.includes('debug');
+    // This single system instruction tells the AI to be a dual-purpose agent.
+    // It is now up to the AI to decide whether to be conversational or to generate code.
+    const systemInstruction = `You are a friendly and helpful AI web development assistant. Your primary goal is to help the user build websites and write code.
+    
+    If the user asks for a website, app, or code snippet, respond with a complete, single-file HTML web application. Do not provide any conversational text, just the code and a brief explanation of what you generated. Wrap the code in markdown with the correct language tag (e.g., \`\`\`html).
 
-    let systemInstruction = '';
-
-    if (isCodeRequest) {
-        systemInstruction = `You are a world-class AI website builder. Your purpose is to write complete, single-file HTML web applications based on user requests. Do not provide any conversational text, just the code and a brief explanation of what you generated.`;
-    } else {
-        systemInstruction = `You are a friendly, conversational AI assistant. You can chat with the user and answer questions about web development and building websites. Always maintain a helpful and positive tone.`;
-    }
+    If the user's query is a general question, a greeting, or a request for advice, respond conversationally and do not provide any code. Be friendly and maintain a positive tone.`;
 
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
@@ -49,19 +39,30 @@ export default async (req, res) => {
             body: JSON.stringify(payload)
         });
 
-        const apiResult = await apiResponse.json();
-
+        // Check if the response is ok before proceeding with the stream
         if (!apiResponse.ok) {
-            console.error('API Error:', apiResult);
-            return res.status(apiResponse.status).json({ error: 'Failed to get response from Gemini API.' });
+            const errorText = await apiResponse.text();
+            console.error('API Error:', apiResponse.status, errorText);
+            res.status(apiResponse.status).json({ error: 'Failed to get a response from the Gemini API.' });
+            return;
         }
 
-        const generatedText = apiResult.candidates?.[0]?.content?.parts?.[0]?.text || 'I am sorry, I could not generate a response. Please try again.';
+        res.writeHead(200, {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Transfer-Encoding': 'chunked'
+        });
 
-        res.status(200).json({ text: generatedText });
+        // Stream the response from the API to the client
+        for await (const chunk of apiResponse.body) {
+            res.write(chunk);
+        }
+
+        res.end();
 
     } catch (error) {
         console.error('Server error:', error);
-        res.status(500).json({ error: 'An unexpected error occurred.' });
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'An unexpected error occurred.' });
+        }
     }
 };
